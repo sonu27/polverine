@@ -57,6 +57,9 @@ esp_err_t mqtt_init(void)
 
 esp_err_t mqtt_publish(const char *topic, const char *data)
 {
+    if (!(xEventGroupGetBits(mqtt_event_group) & MQTT_CONNECTED_BIT)) {
+        return ESP_ERR_INVALID_STATE;
+    }
     int msg_id = esp_mqtt_client_publish(mqtt_client, topic, data, 0, 0, 0);
     return (msg_id >= 0) ? ESP_OK : ESP_FAIL;
 }

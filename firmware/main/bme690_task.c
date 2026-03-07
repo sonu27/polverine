@@ -193,7 +193,9 @@ static void publish_bsec_outputs(bsec_output_t *outputs, uint8_t n_outputs)
         run_in ? "true" : "false");
 
     printf("%s\n", payload);
-    mqtt_publish(topic, payload);
+    if (mqtt_publish(topic, payload) != ESP_OK) {
+        led_flash_red();
+    }
 }
 
 void bme690_task(void *param)
