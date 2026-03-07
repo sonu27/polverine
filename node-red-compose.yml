@@ -1,0 +1,32 @@
+services:
+  node-red:
+    image: nodered/node-red:latest
+    restart: unless-stopped
+    ports:
+      - "1880:1880"
+    volumes:
+      - myNodeREDdata:/data
+
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    configs:
+      - source: mosquitto-conf
+        target: /mosquitto/config/mosquitto.conf
+
+configs:
+  mosquitto-conf:
+    content: |
+      listener 1883
+      allow_anonymous true
+
+volumes:
+  myNodeREDdata:
+    external: true
+  mosquitto-data:
+  mosquitto-log:
