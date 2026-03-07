@@ -203,7 +203,10 @@ void bmv080_task(void *param)
     // Poll serve_interrupt every 100ms
     while (1) {
         status = bmv080_serve_interrupt(handle, bmv080_data_ready, NULL);
-        if (status != E_BMV080_OK && status != E_BMV080_WARNING_FIFO_EVENTS_OVERFLOW) {
+        if (status != E_BMV080_OK
+            && status != E_BMV080_WARNING_FIFO_EVENTS_OVERFLOW
+            && status != E_BMV080_WARNING_FIFO_SW_BUFFER_SIZE
+            && status != E_BMV080_WARNING_FIFO_HW_BUFFER_SIZE) {
             ESP_LOGW(TAG, "serve_interrupt status: %d", status);
         }
         vTaskDelay(pdMS_TO_TICKS(100));

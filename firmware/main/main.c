@@ -134,6 +134,6 @@ void app_main(void)
     ESP_ERROR_CHECK(mqtt_init());
 
     // Launch sensor tasks
-    xTaskCreate(bmv080_task, "bmv080", 16384, NULL, 5, NULL);
+    xTaskCreate(bmv080_task, "bmv080", 32768, NULL, 5, NULL);
     xTaskCreate(bme690_task, "bme690", 16384, NULL, 5, NULL);
 }

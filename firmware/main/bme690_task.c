@@ -12,12 +12,17 @@
 #include "driver/i2c_master.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "nvs_flash.h"
 
 #include "bme69x.h"
 #include "bsec_interface.h"
 #include "bsec_iaq.h"
 
 static const char *TAG = "bme690";
+
+#ifndef BSEC_NVS_SAVE_INTERVAL_MIN
+#define BSEC_NVS_SAVE_INTERVAL_MIN 5
+#endif
 
 #define BSEC_INSTANCE_SIZE 3272
 #define BSEC_TOTAL_HEAT_DUR 140
@@ -246,6 +251,23 @@ void bme690_task(void *param)
         ESP_LOGE(TAG, "bsec_set_configuration failed: %d", bsec_status);
     }
 
+    // Load BSEC state from NVS
+    nvs_handle_t nvs;
+    if (nvs_open("bme690", NVS_READONLY, &nvs) == ESP_OK) {
+        size_t state_len = BSEC_MAX_STATE_BLOB_SIZE;
+        uint8_t state[BSEC_MAX_STATE_BLOB_SIZE];
+        if (nvs_get_blob(nvs, "bsec_state", state, &state_len) == ESP_OK) {
+            bsec_status = bsec_set_state(bsec_instance, state, state_len,
+                                          work_buffer, sizeof(work_buffer));
+            if (bsec_status == BSEC_OK) {
+                ESP_LOGI(TAG, "BSEC state restored from NVS (%d bytes)", (int)state_len);
+            } else {
+                ESP_LOGW(TAG, "bsec_set_state failed: %d (starting fresh)", bsec_status);
+            }
+        }
+        nvs_close(nvs);
+    }
+
     // Subscribe to BSEC outputs at LP rate (3s)
     bsec_sensor_configuration_t requested[NUM_BSEC_OUTPUTS] = {
         { BSEC_SAMPLE_RATE_LP, BSEC_OUTPUT_IAQ },
@@ -303,6 +325,7 @@ void bme690_task(void *param)
             bme69x_set_conf(&conf, &bme);
 
             if (sensor_settings.op_mode == BME69X_FORCED_MODE) {
+                bme69x_set_op_mode(BME69X_SLEEP_MODE, &bme);
                 heatr_conf.enable = BME69X_ENABLE;
                 heatr_conf.heatr_temp = sensor_settings.heater_temperature;
                 heatr_conf.heatr_dur = sensor_settings.heater_duration;
@@ -349,28 +372,56 @@ void bme690_task(void *param)
                             n_inputs++;
                         }
                     }
+                    if (sensor_settings.process_data & (1 << (BSEC_INPUT_PROFILE_PART - 1))) {
+                        if (sensor_data[0].status & BME69X_GASM_VALID_MSK) {
+                            inputs[n_inputs].sensor_id = BSEC_INPUT_PROFILE_PART;
+                            inputs[n_inputs].signal = 0;
+                            inputs[n_inputs].time_stamp = timestamp_ns;
+                            inputs[n_inputs].signal_dimensions = 1;
+                            n_inputs++;
+                        }
+                    }
 
                     // Dynamic temperature offset using CPU die temperature
-                    // The CPU temp and BME690 raw temp are both elevated above
-                    // ambient. We use the CPU temp to estimate the self-heating
-                    // offset. Tunable constants: adjust after comparing against
-                    // a reference thermometer.
-                    last_cpu_temp = cpu_temp_read();
-                    float bme_raw_t = sensor_data[0].temperature;
-                    last_temp_offset = compute_temp_offset(last_cpu_temp, bme_raw_t);
-                    inputs[n_inputs].sensor_id = BSEC_INPUT_HEATSOURCE;
-                    inputs[n_inputs].signal = last_temp_offset;
-                    inputs[n_inputs].time_stamp = timestamp_ns;
-                    inputs[n_inputs].signal_dimensions = 1;
-                    n_inputs++;
+                    if (sensor_settings.process_data & (1 << (BSEC_INPUT_HEATSOURCE - 1))) {
+                        last_cpu_temp = cpu_temp_read();
+                        float bme_raw_t = sensor_data[0].temperature;
+                        last_temp_offset = compute_temp_offset(last_cpu_temp, bme_raw_t);
+                        inputs[n_inputs].sensor_id = BSEC_INPUT_HEATSOURCE;
+                        inputs[n_inputs].signal = last_temp_offset;
+                        inputs[n_inputs].time_stamp = timestamp_ns;
+                        inputs[n_inputs].signal_dimensions = 1;
+                        n_inputs++;
+                    }
 
                     bsec_output_t bsec_outputs[BSEC_NUMBER_OUTPUTS];
                     uint8_t n_bsec_outputs = BSEC_NUMBER_OUTPUTS;
+
+                    static int64_t last_nvs_save_us = 0;
 
                     bsec_status = bsec_do_steps(bsec_instance, inputs, n_inputs,
                                                  bsec_outputs, &n_bsec_outputs);
                     if (bsec_status == BSEC_OK && n_bsec_outputs > 0) {
                         publish_bsec_outputs(bsec_outputs, n_bsec_outputs);
+                        int64_t now_us = esp_timer_get_time();
+                        if (now_us - last_nvs_save_us >= (int64_t)BSEC_NVS_SAVE_INTERVAL_MIN * 60 * 1000000LL) {
+                            last_nvs_save_us = now_us;
+                            uint8_t save_state[BSEC_MAX_STATE_BLOB_SIZE];
+                            uint32_t save_state_len = 0;
+                            uint8_t wb[BSEC_MAX_WORKBUFFER_SIZE];
+                            bsec_library_return_t st = bsec_get_state(bsec_instance, 0,
+                                save_state, BSEC_MAX_STATE_BLOB_SIZE, wb, sizeof(wb),
+                                &save_state_len);
+                            if (st == BSEC_OK) {
+                                nvs_handle_t nvs;
+                                if (nvs_open("bme690", NVS_READWRITE, &nvs) == ESP_OK) {
+                                    nvs_set_blob(nvs, "bsec_state", save_state, save_state_len);
+                                    nvs_commit(nvs);
+                                    nvs_close(nvs);
+                                    ESP_LOGI(TAG, "BSEC state saved (%lu bytes)", (unsigned long)save_state_len);
+                                }
+                            }
+                        }
                     } else if (bsec_status != BSEC_OK) {
                         ESP_LOGW(TAG, "bsec_do_steps: %d", bsec_status);
                     }

@@ -2,46 +2,21 @@
 
 Air quality sensor board: ESP32-S3-MINI-1 + BMV080 PM2.5 + BME690 gas sensor.
 
-## Build
+## Makefile
 
-All builds via Docker — no host toolchain installs.
+All common commands are in the root `Makefile`. Override serial port with `PORT=/dev/cu.usbmodem1234`.
 
-```bash
-docker run --rm -v $(pwd):/project -w /project/firmware espressif/idf:v5.5.3 idf.py build
-```
+| Command | Description |
+|---|---|
+| `make build` | Docker build (ESP-IDF v5.5.3) |
+| `make clean` | Clean rebuild (deletes sdkconfig first) |
+| `make flash` | Flash bootloader + partition table + app |
+| `make erase` | Erase entire flash including NVS |
+| `make monitor` | Serial monitor (30s) |
+| `make nodered-push` | Deploy local flow to Node-RED server |
+| `make nodered-pull` | Pull server flow to local |
 
-Or use `firmware/build.sh`.
-
-### Clean rebuild (needed after sdkconfig.defaults changes)
-
-```bash
-docker run --rm -v $(pwd):/project -w /project/firmware espressif/idf:v5.5.3 bash -c "rm -f sdkconfig && idf.py build"
-```
-
-## Flash
-
-Uses esptool from a Python venv (`.venv/`):
-
-```bash
-.venv/bin/python -m esptool --chip esp32s3 -b 460800 -p /dev/cu.usbmodem2101 write-flash --flash-mode dio --flash-size 8MB --flash-freq 80m 0x0 firmware/build/bootloader/bootloader.bin 0x8000 firmware/build/partition_table/partition-table.bin 0x10000 firmware/build/polverine.bin
-```
-
-Board must be in flash mode (hold BOOT, press RESET, release BOOT).
-
-## Serial Monitor
-
-```bash
-.venv/bin/python3 -c "
-import serial, time
-ser = serial.Serial('/dev/cu.usbmodem2101', 115200, timeout=1)
-ser.dtr = False; ser.rts = True; time.sleep(0.1); ser.rts = False; time.sleep(0.5)
-end = time.time() + 30
-while time.time() < end:
-    data = ser.read(ser.in_waiting or 1)
-    if data: print(data.decode('utf-8', errors='replace'), end='', flush=True)
-ser.close()
-"
-```
+Board must be in flash mode for `flash`/`erase` (hold BOOT, press RESET, release BOOT).
 
 ## Config
 
