@@ -45,6 +45,18 @@ Defined in `firmware/main/pins.h`:
 
 SDK source archives in project root (`bmv080-sdk-v11-2-0/`, `bsec_v3-2-1-0/`) — do NOT reference the BlackIoT/Polverine repo code.
 
+## SDK Documentation
+
+Markdown conversions of SDK docs live in `docs/`:
+
+- `docs/bmv080/README.md` — main BMV080 SDK docs
+- `docs/bmv080/CHANGELOG.md` — BMV080 version history
+- `docs/bmv080/bmv080-api-reference.md` — BMV080 C API reference (converted from Doxygen HTML)
+- `docs/bsec/integration-guide.md` — BSEC integration guide (converted from PDF)
+- `docs/bsec/release-notes.md` — BSEC 3.2.1.0 release notes (converted from PDF)
+- `docs/bsec/binary-size-info.md` — BSEC binary sizes per platform (converted from PDF)
+- `docs/bsec/integration-examples.md` — BSEC integration examples
+
 ## Node-RED Dashboard
 
 Dashboard v2 using `@flowfuse/node-red-dashboard` on `home.lan:1880`.
