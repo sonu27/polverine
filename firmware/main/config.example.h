@@ -6,7 +6,7 @@
 #define MQTT_BROKER_URL "mqtt://your-broker:1883"
 
 // BSEC NVS save interval in minutes (calibration state persistence)
-#define BSEC_NVS_SAVE_INTERVAL_MIN  5
+#define BSEC_NVS_SAVE_INTERVAL_MIN  240
 
 // BME690 dynamic temperature offset: offset = BASE + SCALE * cpu_temp
 // Tune by comparing against a reference thermometer.

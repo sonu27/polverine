@@ -21,7 +21,7 @@
 static const char *TAG = "bme690";
 
 #ifndef BSEC_NVS_SAVE_INTERVAL_MIN
-#define BSEC_NVS_SAVE_INTERVAL_MIN 5
+#define BSEC_NVS_SAVE_INTERVAL_MIN 240
 #endif
 
 #define BSEC_INSTANCE_SIZE 3272
