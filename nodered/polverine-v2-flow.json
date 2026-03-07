@@ -210,6 +210,8 @@
                 "7e64aee159d585b8",
                 "51c4f325b3366f08",
                 "978e32f9ea68ebc9",
+                "a3b1c2d3e4f50001",
+                "a3b1c2d3e4f50002",
                 "fd1ca61b212b59a3"
             ]
         ]
@@ -514,6 +516,46 @@
         "wires": [
             [
                 "00f77f7bea9961f7"
+            ]
+        ]
+    },
+    {
+        "id": "a3b1c2d3e4f50001",
+        "type": "function",
+        "z": "d2fe54ca79fd7aa8",
+        "name": "CPU Temperature",
+        "func": "return { topic: \"CPU Temp\", payload: msg.payload.cpu_temperature };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 940,
+        "wires": [
+            [
+                "ab70519a0e43df17"
+            ]
+        ]
+    },
+    {
+        "id": "a3b1c2d3e4f50002",
+        "type": "function",
+        "z": "d2fe54ca79fd7aa8",
+        "name": "Temp Offset",
+        "func": "return { topic: \"Temp Offset\", payload: msg.payload.temp_offset };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 970,
+        "wires": [
+            [
+                "ab70519a0e43df17"
             ]
         ]
     },

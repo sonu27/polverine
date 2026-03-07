@@ -14,6 +14,7 @@
 #include "bmv080_task.h"
 #include "bme690_task.h"
 #include "led.h"
+#include "cpu_temp.h"
 
 static const char *TAG = "main";
 
@@ -125,6 +126,9 @@ void app_main(void)
         esp_restart();
     }
     led_set_blue(false);
+
+    // Init CPU temperature sensor
+    cpu_temp_init();
 
     // Start MQTT
     ESP_ERROR_CHECK(mqtt_init());

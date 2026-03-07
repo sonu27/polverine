@@ -3,6 +3,7 @@
 #include "mqtt.h"
 #include "led.h"
 #include "config.h"
+#include "cpu_temp.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -31,6 +32,28 @@ static int64_t get_timestamp_ns(void)
 {
     return esp_timer_get_time() * 1000LL;
 }
+
+// Compute dynamic temperature offset from CPU die temp and BME690 raw temp.
+// Both readings are above ambient due to self-heating. The offset tells BSEC
+// how many degrees the BME690 is above true ambient.
+//
+// Starting formula (tunable):
+//   offset = BME690_TEMP_OFFSET_BASE + BME690_TEMP_OFFSET_SCALE * cpu_temp
+//
+// With defaults 12.5 + 0.25 * cpu_temp:
+//   cpu=45°C → offset=23.75
+//   cpu=50°C → offset=25.0
+//   cpu=40°C → offset=22.5
+static float compute_temp_offset(float cpu_temp, float bme_raw_temp)
+{
+    (void)bme_raw_temp; // available for future refinement
+    float offset = BME690_TEMP_OFFSET_BASE + BME690_TEMP_OFFSET_SCALE * cpu_temp;
+    if (offset < 0.0f) offset = 0.0f;
+    return offset;
+}
+
+static float last_cpu_temp = 0.0f;
+static float last_temp_offset = 0.0f;
 
 // BME69x I2C read callback
 static int8_t bme69x_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t length, void *intf_ptr)
@@ -151,6 +174,7 @@ static void publish_bsec_outputs(bsec_output_t *outputs, uint8_t n_outputs)
         "\"gas_percentage\":%.1f,"
         "\"tvoc\":%.0f,\"tvoc_accuracy\":%u,"
         "\"raw_temperature\":%.1f,\"raw_humidity\":%.1f,\"raw_gas\":%.0f,"
+        "\"cpu_temperature\":%.1f,\"temp_offset\":%.1f,"
         "\"stabilized\":%s,\"run_in\":%s}",
         temperature, humidity, pressure,
         iaq, iaq_accuracy,
@@ -159,6 +183,7 @@ static void publish_bsec_outputs(bsec_output_t *outputs, uint8_t n_outputs)
         gas_pct,
         tvoc, tvoc_accuracy,
         raw_temp, raw_hum, raw_gas,
+        last_cpu_temp, last_temp_offset,
         stabilized ? "true" : "false",
         run_in ? "true" : "false");
 
@@ -325,9 +350,16 @@ void bme690_task(void *param)
                         }
                     }
 
-                    // Temperature offset for self-heating compensation
+                    // Dynamic temperature offset using CPU die temperature
+                    // The CPU temp and BME690 raw temp are both elevated above
+                    // ambient. We use the CPU temp to estimate the self-heating
+                    // offset. Tunable constants: adjust after comparing against
+                    // a reference thermometer.
+                    last_cpu_temp = cpu_temp_read();
+                    float bme_raw_t = sensor_data[0].temperature;
+                    last_temp_offset = compute_temp_offset(last_cpu_temp, bme_raw_t);
                     inputs[n_inputs].sensor_id = BSEC_INPUT_HEATSOURCE;
-                    inputs[n_inputs].signal = BME690_TEMP_OFFSET;
+                    inputs[n_inputs].signal = last_temp_offset;
                     inputs[n_inputs].time_stamp = timestamp_ns;
                     inputs[n_inputs].signal_dimensions = 1;
                     n_inputs++;
