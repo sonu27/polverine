@@ -70,6 +70,37 @@ Defined in `firmware/main/pins.h`:
 
 SDK source archives in project root (`bmv080-sdk-v11-2-0/`, `bsec_v3-2-1-0/`) — do NOT reference the BlackIoT/Polverine repo code.
 
+## Node-RED Dashboard
+
+Dashboard v2 using `@flowfuse/node-red-dashboard` on `home.lan:1880`.
+
+- Flow JSON: `nodered/polverine-v2-flow.json`
+- Dashboard URL: `http://home.lan:1880/dashboard/polverine`
+- Server: Docker compose via `node-red-compose.yml` (container: `iaq-node-red-1`)
+- MQTT broker: `home.lan:1883` (Mosquitto in same compose)
+- Deployed flows live in container volume `myNodeREDdata` at `/data/flows.json`
+
+### Push local flow to server
+
+```bash
+scp nodered/polverine-v2-flow.json home.lan:/tmp/flows.json
+ssh home.lan "docker cp /tmp/flows.json iaq-node-red-1:/data/flows.json && docker restart iaq-node-red-1"
+```
+
+### Pull server flow to local
+
+```bash
+ssh home.lan "docker exec iaq-node-red-1 cat /data/flows.json" > nodered/polverine-v2-flow.json
+```
+
+### Dashboard 2.0 gotchas
+
+- `ui-group` `width`/`height` must be **integers**, not strings
+- `ui-group` needs `visible: "true"`, `disabled: "false"`, `groupType: "default"`
+- `ui-page` needs `breakpoints` array for responsive layout
+- Only one `ui-base` per Node-RED instance — pages share it (path `/dashboard`)
+- Node-RED regenerates widget IDs on import but keeps config node IDs
+
 ## Rules
 
 - Docker only for builds — no installing ESP-IDF on host
