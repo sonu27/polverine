@@ -1079,19 +1079,19 @@ configs:
             "targets": [
               {
                 "datasource": "TimescaleDB",
-                "rawSql": "SELECT time AS \"time\", pm1 AS \"PM1\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "rawSql": "SELECT time_bucket('$$__interval', time) AS \"time\", avg(pm1) AS \"PM1\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nGROUP BY 1\nORDER BY 1",
                 "format": "time_series",
                 "refId": "A"
               },
               {
                 "datasource": "TimescaleDB",
-                "rawSql": "SELECT time AS \"time\", pm2_5 AS \"PM2.5\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "rawSql": "SELECT time_bucket('$$__interval', time) AS \"time\", avg(pm2_5) AS \"PM2.5\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nGROUP BY 1\nORDER BY 1",
                 "format": "time_series",
                 "refId": "B"
               },
               {
                 "datasource": "TimescaleDB",
-                "rawSql": "SELECT time AS \"time\", pm10 AS \"PM10\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "rawSql": "SELECT time_bucket('$$__interval', time) AS \"time\", avg(pm10) AS \"PM10\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nGROUP BY 1\nORDER BY 1",
                 "format": "time_series",
                 "refId": "C"
               }
@@ -1158,19 +1158,19 @@ configs:
             "targets": [
               {
                 "datasource": "TimescaleDB",
-                "rawSql": "SELECT time AS \"time\", pm1_count AS \"PM1\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "rawSql": "SELECT time_bucket('$$__interval', time) AS \"time\", avg(pm1_count) AS \"PM1\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nGROUP BY 1\nORDER BY 1",
                 "format": "time_series",
                 "refId": "A"
               },
               {
                 "datasource": "TimescaleDB",
-                "rawSql": "SELECT time AS \"time\", pm2_5_count AS \"PM2.5\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "rawSql": "SELECT time_bucket('$$__interval', time) AS \"time\", avg(pm2_5_count) AS \"PM2.5\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nGROUP BY 1\nORDER BY 1",
                 "format": "time_series",
                 "refId": "B"
               },
               {
                 "datasource": "TimescaleDB",
-                "rawSql": "SELECT time AS \"time\", pm10_count AS \"PM10\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "rawSql": "SELECT time_bucket('$$__interval', time) AS \"time\", avg(pm10_count) AS \"PM10\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nGROUP BY 1\nORDER BY 1",
                 "format": "time_series",
                 "refId": "C"
               }
