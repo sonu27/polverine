@@ -34,16 +34,18 @@ static void mqtt_event_handler(void *arg, esp_event_base_t base, int32_t event_i
 
 void mqtt_get_device_id(char *buf, size_t len)
 {
-    uint8_t mac[6];
-    esp_read_mac(mac, ESP_MAC_WIFI_STA);
-    snprintf(buf, len, "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    strncpy(buf, device_id, len);
+    buf[len - 1] = '\0';
 }
 
 esp_err_t mqtt_init(void)
 {
     mqtt_event_group = xEventGroupCreate();
 
-    mqtt_get_device_id(device_id, sizeof(device_id));
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    snprintf(device_id, sizeof(device_id), "%02x%02x%02x%02x%02x%02x",
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     ESP_LOGI(TAG, "Device ID: %s", device_id);
 
     const esp_mqtt_client_config_t mqtt_cfg = {

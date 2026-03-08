@@ -105,7 +105,7 @@ static void bmv080_data_ready(bmv080_output_t output, void *param)
         output.is_obstructed ? "true" : "false",
         output.is_outside_measurement_range ? "true" : "false");
 
-    printf("%s\n", payload);
+    ESP_LOGI(TAG, "%s", payload);
     if (mqtt_publish(topic, payload) != ESP_OK) {
         led_flash_red();
     }

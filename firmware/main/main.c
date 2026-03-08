@@ -134,6 +134,12 @@ void app_main(void)
     ESP_ERROR_CHECK(mqtt_init());
 
     // Launch sensor tasks
-    xTaskCreate(bmv080_task, "bmv080", 32768, NULL, 5, NULL);
-    xTaskCreate(bme690_task, "bme690", 16384, NULL, 5, NULL);
+    if (xTaskCreate(bmv080_task, "bmv080", 32768, NULL, 5, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create bmv080 task");
+        led_set_red(true);
+    }
+    if (xTaskCreate(bme690_task, "bme690", 16384, NULL, 5, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create bme690 task");
+        led_set_red(true);
+    }
 }

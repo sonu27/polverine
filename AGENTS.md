@@ -45,7 +45,7 @@ ESP-IDF v5.5.3, target esp32s3, 80MHz CPU (power management locks to 80MHz).
 
 **MQTT**: Topics `polverine/{mac}/bmv080` and `polverine/{mac}/bme690`, QoS 0, JSON payloads.
 
-**LED states**: blue=WiFi connecting, green flash=data published, red flash=MQTT publish failure, solid red=fatal error.
+**LED states**: blue=WiFi connecting, red flash=MQTT publish failure, solid red=fatal error.
 
 ## SDK Components
 

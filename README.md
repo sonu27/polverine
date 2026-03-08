@@ -91,7 +91,6 @@ Data is published as JSON to MQTT topics `polverine/{mac}/bmv080` and `polverine
 | LED | Meaning |
 |---|---|
 | Blue (solid) | Connecting to WiFi |
-| Green (flash) | Data published successfully |
 | Red (flash) | MQTT publish failed |
 | Red (solid) | Fatal error (sensor init failed, etc.) |
 

@@ -70,12 +70,11 @@ static int8_t bme69x_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t leng
 // BME69x I2C write callback
 static int8_t bme69x_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t length, void *intf_ptr)
 {
-    uint8_t *buf = malloc(1 + length);
-    if (!buf) return BME69X_E_COM_FAIL;
+    uint8_t buf[64]; // BME69x register writes are always small
+    if (1 + length > sizeof(buf)) return BME69X_E_COM_FAIL;
     buf[0] = reg_addr;
     memcpy(buf + 1, reg_data, length);
     esp_err_t err = i2c_master_transmit(i2c_dev, buf, 1 + length, 1000);
-    free(buf);
     return (err == ESP_OK) ? BME69X_OK : BME69X_E_COM_FAIL;
 }
 
@@ -192,7 +191,7 @@ static void publish_bsec_outputs(bsec_output_t *outputs, uint8_t n_outputs)
         stabilized ? "true" : "false",
         run_in ? "true" : "false");
 
-    printf("%s\n", payload);
+    ESP_LOGI(TAG, "%s", payload);
     if (mqtt_publish(topic, payload) != ESP_OK) {
         led_flash_red();
     }
