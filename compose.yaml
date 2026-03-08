@@ -1,0 +1,1198 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    configs:
+      - source: mosquitto-conf
+        target: /mosquitto/config/mosquitto.conf
+
+  timescaledb:
+    image: timescale/timescaledb:2.25.2-pg18
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: polverine
+      POSTGRES_PASSWORD: polverine
+      POSTGRES_DB: polverine
+    volumes:
+      - timescaledb-data:/var/lib/postgresql
+    configs:
+      - source: timescaledb-init
+        target: /docker-entrypoint-initdb.d/init.sql
+
+  telegraf:
+    image: telegraf:latest
+    restart: unless-stopped
+    depends_on:
+      - timescaledb
+      - mosquitto
+    configs:
+      - source: telegraf-conf
+        target: /etc/telegraf/telegraf.conf
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: polverine
+    volumes:
+      - grafana-data:/var/lib/grafana
+    configs:
+      - source: grafana-datasource
+        target: /etc/grafana/provisioning/datasources/timescaledb.yml
+      - source: grafana-dashboard-provision
+        target: /etc/grafana/provisioning/dashboards/dashboards.yml
+      - source: grafana-dashboard-polverine
+        target: /etc/grafana/dashboards/polverine.json
+
+configs:
+  mosquitto-conf:
+    content: |
+      listener 1883
+      allow_anonymous true
+  timescaledb-init:
+    content: |
+      CREATE EXTENSION IF NOT EXISTS timescaledb;
+  telegraf-conf:
+    content: |
+      [agent]
+        interval = "1s"
+        flush_interval = "10s"
+
+      [[inputs.mqtt_consumer]]
+        name_override = "bme690"
+        servers = ["tcp://mosquitto:1883"]
+        topics = ["polverine/+/bme690"]
+        data_format = "json"
+        json_string_fields = ["stabilized", "run_in"]
+        topic_tag = ""
+        [inputs.mqtt_consumer.tags]
+          sensor = "bme690"
+
+      [[inputs.mqtt_consumer]]
+        name_override = "bmv080"
+        servers = ["tcp://mosquitto:1883"]
+        topics = ["polverine/+/bmv080"]
+        data_format = "json"
+        json_string_fields = ["obstructed", "out_of_range"]
+        topic_tag = ""
+        [inputs.mqtt_consumer.tags]
+          sensor = "bmv080"
+
+      [[outputs.postgresql]]
+        connection = "postgres://polverine:polverine@timescaledb:5432/polverine?sslmode=disable"
+        tags_as_foreign_keys = true
+        tag_table_suffix = "_tag"
+  grafana-datasource:
+    content: |
+      apiVersion: 1
+      datasources:
+        - name: TimescaleDB
+          type: postgres
+          access: proxy
+          url: timescaledb:5432
+          database: polverine
+          user: polverine
+          secureJsonData:
+            password: polverine
+          jsonData:
+            database: polverine
+            sslmode: disable
+            postgresVersion: 1800
+            timescaledb: true
+          isDefault: true
+  grafana-dashboard-provision:
+    content: |
+      apiVersion: 1
+      providers:
+        - name: Polverine
+          orgId: 1
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /etc/grafana/dashboards
+  grafana-dashboard-polverine:
+    content: |
+      {
+        "annotations": {
+          "list": []
+        },
+        "editable": true,
+        "graphTooltip": 1,
+        "id": null,
+        "links": [],
+        "schemaVersion": 39,
+        "tags": [
+          "polverine",
+          "air-quality"
+        ],
+        "templating": {
+          "list": []
+        },
+        "time": {
+          "from": "now-6h",
+          "to": "now"
+        },
+        "timepicker": {},
+        "timezone": "",
+        "title": "Polverine",
+        "uid": "polverine",
+        "version": 1,
+        "refresh": "10s",
+        "panels": [
+          {
+            "id": 1,
+            "type": "row",
+            "title": "Climate",
+            "collapsed": false,
+            "gridPos": {
+              "h": 1,
+              "w": 24,
+              "x": 0,
+              "y": 0
+            },
+            "panels": []
+          },
+          {
+            "id": 2,
+            "type": "stat",
+            "title": "Temperature",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 6,
+              "w": 3,
+              "x": 0,
+              "y": 1
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", temperature\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "celsius",
+                "decimals": 1,
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "blue",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 18
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 26
+                    },
+                    {
+                      "color": "red",
+                      "value": 30
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "graphMode": "area",
+              "colorMode": "value",
+              "textMode": "auto",
+              "orientation": "auto"
+            }
+          },
+          {
+            "id": 3,
+            "type": "stat",
+            "title": "Humidity",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 6,
+              "w": 3,
+              "x": 3,
+              "y": 1
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", humidity\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "decimals": 1,
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 30
+                    },
+                    {
+                      "color": "green",
+                      "value": 40
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 60
+                    },
+                    {
+                      "color": "red",
+                      "value": 70
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "graphMode": "area",
+              "colorMode": "value",
+              "textMode": "auto",
+              "orientation": "auto"
+            }
+          },
+          {
+            "id": 4,
+            "type": "timeseries",
+            "title": "Temperature",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 6,
+              "w": 6,
+              "x": 6,
+              "y": 1
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", temperature AS \"Temperature\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "celsius",
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 5,
+            "type": "timeseries",
+            "title": "Humidity",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 6,
+              "w": 6,
+              "x": 12,
+              "y": 1
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", humidity AS \"Humidity\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 6,
+            "type": "timeseries",
+            "title": "Pressure",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 6,
+              "w": 6,
+              "x": 18,
+              "y": 1
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", pressure / 100 AS \"Pressure\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "pressurehpa",
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 7,
+            "type": "row",
+            "title": "Air Quality",
+            "collapsed": false,
+            "gridPos": {
+              "h": 1,
+              "w": 24,
+              "x": 0,
+              "y": 7
+            },
+            "panels": []
+          },
+          {
+            "id": 8,
+            "type": "gauge",
+            "title": "IAQ",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 4,
+              "x": 0,
+              "y": 8
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", iaq\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "min": 0,
+                "max": 500,
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "#73BF69",
+                      "value": 51
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 101
+                    },
+                    {
+                      "color": "orange",
+                      "value": 151
+                    },
+                    {
+                      "color": "red",
+                      "value": 201
+                    },
+                    {
+                      "color": "purple",
+                      "value": 301
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "showThresholdLabels": false,
+              "showThresholdMarkers": true,
+              "orientation": "auto"
+            }
+          },
+          {
+            "id": 9,
+            "type": "timeseries",
+            "title": "IAQ",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 10,
+              "x": 4,
+              "y": 8
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", iaq AS \"IAQ\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never",
+                  "thresholdsStyle": {
+                    "mode": "area"
+                  }
+                },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "rgba(255, 152, 48, 0.1)",
+                      "value": 151
+                    },
+                    {
+                      "color": "rgba(255, 0, 0, 0.1)",
+                      "value": 201
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 10,
+            "type": "timeseries",
+            "title": "Static IAQ",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 10,
+              "x": 14,
+              "y": 8
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", static_iaq AS \"Static IAQ\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 11,
+            "type": "timeseries",
+            "title": "CO\u2082",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 6,
+              "x": 0,
+              "y": 16
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", co2 AS \"CO2\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ppm",
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "semi-dark-red"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 12,
+            "type": "timeseries",
+            "title": "bVOC",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 6,
+              "x": 6,
+              "y": 16
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", voc * 1000 AS \"bVOC\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ppb",
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-yellow"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 13,
+            "type": "timeseries",
+            "title": "tVOC",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 6,
+              "x": 12,
+              "y": 16
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", tvoc AS \"tVOC\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-orange"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 14,
+            "type": "timeseries",
+            "title": "Gas %",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 6,
+              "x": 18,
+              "y": 16
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", gas_percentage AS \"Gas %\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 15,
+            "type": "row",
+            "title": "Particulate Matter",
+            "collapsed": false,
+            "gridPos": {
+              "h": 1,
+              "w": 24,
+              "x": 0,
+              "y": 24
+            },
+            "panels": []
+          },
+          {
+            "id": 16,
+            "type": "timeseries",
+            "title": "PM Mass",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 25
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", pm1 AS \"PM1\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              },
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", pm2_5 AS \"PM2.5\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "B"
+              },
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", pm10 AS \"PM10\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "C"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "con\u03bcgm3",
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 17,
+            "type": "timeseries",
+            "title": "PM Count",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 25
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", pm1_count AS \"PM1\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              },
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", pm2_5_count AS \"PM2.5\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "B"
+              },
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", pm10_count AS \"PM10\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "C"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "/cm\u00b3",
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 18,
+            "type": "row",
+            "title": "Diagnostics",
+            "collapsed": false,
+            "gridPos": {
+              "h": 1,
+              "w": 24,
+              "x": 0,
+              "y": 33
+            },
+            "panels": []
+          },
+          {
+            "id": 19,
+            "type": "timeseries",
+            "title": "IAQ Accuracy",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 6,
+              "x": 0,
+              "y": 34
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", iaq_accuracy AS \"IAQ Accuracy\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "min": 0,
+                "max": 3,
+                "decimals": 0,
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 2,
+                  "fillOpacity": 20,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 20,
+            "type": "timeseries",
+            "title": "tVOC Accuracy",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 6,
+              "x": 6,
+              "y": 34
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", tvoc_accuracy AS \"tVOC Accuracy\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "min": 0,
+                "max": 3,
+                "decimals": 0,
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-orange"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 2,
+                  "fillOpacity": 20,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 21,
+            "type": "timeseries",
+            "title": "Raw Sensors",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 6,
+              "x": 12,
+              "y": 34
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", raw_temperature AS \"Raw Temp\", cpu_temperature AS \"CPU Temp\", temp_offset AS \"Temp Offset\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              },
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", raw_humidity AS \"Raw Humidity\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "B"
+              },
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", raw_gas AS \"Raw Gas\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "C"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 0,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": [
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "Raw Gas"
+                  },
+                  "properties": [
+                    {
+                      "id": "custom.axisPlacement",
+                      "value": "right"
+                    },
+                    {
+                      "id": "unit",
+                      "value": "ohm"
+                    }
+                  ]
+                },
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "Raw Humidity"
+                  },
+                  "properties": [
+                    {
+                      "id": "unit",
+                      "value": "percent"
+                    }
+                  ]
+                },
+                {
+                  "matcher": {
+                    "id": "byRegexp",
+                    "options": "/(Temp|Offset)/"
+                  },
+                  "properties": [
+                    {
+                      "id": "unit",
+                      "value": "celsius"
+                    }
+                  ]
+                }
+              ]
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            }
+          },
+          {
+            "id": 22,
+            "type": "table",
+            "title": "Status",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 6,
+              "x": 18,
+              "y": 34
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT\n  CASE WHEN stabilized = 'true' THEN 'Yes' ELSE 'No' END AS \"Stabilized\",\n  CASE WHEN run_in = 'true' THEN 'Yes' ELSE 'No' END AS \"Run In\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
+                "format": "table",
+                "refId": "A"
+              },
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT\n  CASE WHEN obstructed = 'true' THEN 'Yes' ELSE 'No' END AS \"Obstructed\",\n  CASE WHEN out_of_range = 'true' THEN 'Yes' ELSE 'No' END AS \"Out of Range\",\n  runtime AS \"Runtime (s)\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
+                "format": "table",
+                "refId": "B"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {},
+              "overrides": []
+            },
+            "options": {
+              "showHeader": true,
+              "cellHeight": "sm"
+            },
+            "transformations": [
+              {
+                "id": "merge",
+                "options": {}
+              }
+            ]
+          }
+        ]
+      }
+
+volumes:
+  mosquitto-data:
+  mosquitto-log:
+  timescaledb-data:
+  grafana-data:

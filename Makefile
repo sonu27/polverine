@@ -6,7 +6,7 @@ BOOTLOADER  = firmware/build/bootloader/bootloader.bin
 PARTITION   = firmware/build/partition_table/partition-table.bin
 APP         = firmware/build/polverine.bin
 
-.PHONY: build clean flash erase monitor nodered-push nodered-pull
+.PHONY: build clean flash erase monitor
 
 build:
 	$(DOCKER_RUN) idf.py build
@@ -32,10 +32,3 @@ monitor:
 	    for _ in iter(lambda: time.time() < end, False) \
 	]; \
 	ser.close()"
-
-nodered-push:
-	scp nodered/polverine-v2-flow.json home.lan:/tmp/flows.json
-	ssh home.lan "docker cp /tmp/flows.json iaq-node-red-1:/data/flows.json && docker restart iaq-node-red-1"
-
-nodered-pull:
-	ssh home.lan "docker exec iaq-node-red-1 cat /data/flows.json" > nodered/polverine-v2-flow.json
