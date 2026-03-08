@@ -79,10 +79,12 @@ Dashboard and data pipeline deployed via Portainer on `home.lan` (or your own ho
 
 ### Data Schema
 
-Two tables, auto-created by Telegraf (one per sensor):
+Two hypertables, pre-created in TimescaleDB init SQL (7-day chunks):
 - `bme690` — temperature, humidity, pressure, iaq, static_iaq, co2, voc, gas_percentage, tvoc, iaq_accuracy, tvoc_accuracy, raw_temperature, raw_humidity, raw_gas, cpu_temperature, temp_offset, stabilized, run_in
 - `bmv080` — pm1, pm2_5, pm10, pm1_count, pm2_5_count, pm10_count, runtime, obstructed, out_of_range
 - Tag tables (`bme690_tag`, `bmv080_tag`) hold device MAC via `tag_id` foreign key
+- Compression: segment by `tag_id`, order by `time DESC`, compress after 1 day
+- Retention: drop chunks older than 1 year
 
 ### Dashboard Layout (4 rows)
 

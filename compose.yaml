@@ -63,12 +63,68 @@ configs:
     content: |
       CREATE EXTENSION IF NOT EXISTS timescaledb;
 
-      -- Compression and retention policies require tables to exist.
-      -- Run manually once after first data arrives:
-      --   SELECT add_compression_policy('bme690', INTERVAL '1 day');
-      --   SELECT add_compression_policy('bmv080', INTERVAL '1 day');
-      --   SELECT add_retention_policy('bme690', INTERVAL '1 year');
-      --   SELECT add_retention_policy('bmv080', INTERVAL '1 year');
+      -- Tag tables (Telegraf tags_as_foreign_keys with deterministic BIGINT hashing)
+      CREATE TABLE bme690_tag (tag_id BIGINT PRIMARY KEY, sensor TEXT);
+      CREATE TABLE bmv080_tag (tag_id BIGINT PRIMARY KEY, sensor TEXT);
+
+      -- bme690 data table
+      CREATE TABLE bme690 (
+          time TIMESTAMPTZ NOT NULL,
+          tag_id BIGINT,
+          temperature DOUBLE PRECISION,
+          humidity DOUBLE PRECISION,
+          pressure BIGINT,
+          iaq BIGINT,
+          iaq_accuracy BIGINT,
+          static_iaq BIGINT,
+          co2 BIGINT,
+          voc DOUBLE PRECISION,
+          gas_percentage DOUBLE PRECISION,
+          tvoc BIGINT,
+          tvoc_accuracy BIGINT,
+          raw_temperature DOUBLE PRECISION,
+          raw_humidity DOUBLE PRECISION,
+          raw_gas BIGINT,
+          cpu_temperature DOUBLE PRECISION,
+          temp_offset DOUBLE PRECISION,
+          stabilized BOOLEAN,
+          run_in BOOLEAN
+      );
+      SELECT create_hypertable('bme690', 'time', chunk_time_interval => INTERVAL '7 days');
+
+      -- bmv080 data table
+      CREATE TABLE bmv080 (
+          time TIMESTAMPTZ NOT NULL,
+          tag_id BIGINT,
+          runtime DOUBLE PRECISION,
+          pm1 DOUBLE PRECISION,
+          pm2_5 DOUBLE PRECISION,
+          pm10 DOUBLE PRECISION,
+          pm1_count DOUBLE PRECISION,
+          pm2_5_count DOUBLE PRECISION,
+          pm10_count DOUBLE PRECISION,
+          obstructed BOOLEAN,
+          out_of_range BOOLEAN
+      );
+      SELECT create_hypertable('bmv080', 'time', chunk_time_interval => INTERVAL '7 days');
+
+      -- Compression
+      ALTER TABLE bme690 SET (
+          timescaledb.compress,
+          timescaledb.compress_segmentby = 'tag_id',
+          timescaledb.compress_orderby = 'time DESC'
+      );
+      ALTER TABLE bmv080 SET (
+          timescaledb.compress,
+          timescaledb.compress_segmentby = 'tag_id',
+          timescaledb.compress_orderby = 'time DESC'
+      );
+      SELECT add_compression_policy('bme690', INTERVAL '1 day');
+      SELECT add_compression_policy('bmv080', INTERVAL '1 day');
+
+      -- Retention (drop chunks older than 1 year)
+      SELECT add_retention_policy('bme690', INTERVAL '1 year');
+      SELECT add_retention_policy('bmv080', INTERVAL '1 year');
   telegraf-conf:
     content: |
       [agent]
@@ -97,10 +153,7 @@ configs:
         connection = "postgres://polverine:polverine@timescaledb:5432/polverine?sslmode=disable"
         tags_as_foreign_keys = true
         tag_table_suffix = "_tag"
-        create_templates = [
-          "CREATE TABLE {{ .table }} ({{ .allColumns }})",
-          "SELECT create_hypertable({{ .table|quoteLiteral }}, 'time', chunk_time_interval => INTERVAL '7d', if_not_exists => TRUE)",
-        ]
+        timestamp_column_type = "timestamp with time zone"
   grafana-datasource:
     content: |
       apiVersion: 1
@@ -406,7 +459,7 @@ configs:
             "targets": [
               {
                 "datasource": "TimescaleDB",
-                "rawSql": "SELECT time AS \"time\", pressure / 100 AS \"Pressure\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "rawSql": "SELECT time AS \"time\", pressure / 100.0 AS \"Pressure\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
                 "format": "time_series",
                 "refId": "A"
               }
