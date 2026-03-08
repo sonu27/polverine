@@ -209,13 +209,13 @@ configs:
         "timezone": "",
         "title": "Polverine",
         "uid": "polverine",
-        "version": 1,
+        "version": 3,
         "refresh": "10s",
         "panels": [
           {
             "id": 1,
             "type": "row",
-            "title": "Climate",
+            "title": "Current",
             "collapsed": false,
             "gridPos": {
               "h": 1,
@@ -232,7 +232,7 @@ configs:
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 6,
-              "w": 3,
+              "w": 4,
               "x": 0,
               "y": 1
             },
@@ -284,7 +284,8 @@ configs:
               "colorMode": "value",
               "textMode": "auto",
               "orientation": "auto"
-            }
+            },
+            "description": "Ambient temperature from BME690, compensated for ESP32 self-heating. Ideal indoor range: 18–26°C."
           },
           {
             "id": 3,
@@ -293,8 +294,8 @@ configs:
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 6,
-              "w": 3,
-              "x": 3,
+              "w": 4,
+              "x": 4,
               "y": 1
             },
             "targets": [
@@ -349,111 +350,18 @@ configs:
               "colorMode": "value",
               "textMode": "auto",
               "orientation": "auto"
-            }
+            },
+            "description": "Relative humidity from BME690. Ideal indoor range: 40–60%. Below 30% or above 70% can cause discomfort and material damage."
           },
           {
-            "id": 4,
-            "type": "timeseries",
-            "title": "Temperature",
-            "datasource": "TimescaleDB",
-            "gridPos": {
-              "h": 6,
-              "w": 6,
-              "x": 6,
-              "y": 1
-            },
-            "targets": [
-              {
-                "datasource": "TimescaleDB",
-                "rawSql": "SELECT time AS \"time\", temperature AS \"Temperature\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
-                "format": "time_series",
-                "refId": "A"
-              }
-            ],
-            "fieldConfig": {
-              "defaults": {
-                "unit": "celsius",
-                "color": {
-                  "mode": "fixed",
-                  "fixedColor": "orange"
-                },
-                "custom": {
-                  "drawStyle": "line",
-                  "lineWidth": 1,
-                  "fillOpacity": 10,
-                  "spanNulls": true,
-                  "showPoints": "never"
-                }
-              },
-              "overrides": []
-            },
-            "options": {
-              "tooltip": {
-                "mode": "multi",
-                "sort": "none"
-              },
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom"
-              }
-            }
-          },
-          {
-            "id": 5,
-            "type": "timeseries",
-            "title": "Humidity",
-            "datasource": "TimescaleDB",
-            "gridPos": {
-              "h": 6,
-              "w": 6,
-              "x": 12,
-              "y": 1
-            },
-            "targets": [
-              {
-                "datasource": "TimescaleDB",
-                "rawSql": "SELECT time AS \"time\", humidity AS \"Humidity\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
-                "format": "time_series",
-                "refId": "A"
-              }
-            ],
-            "fieldConfig": {
-              "defaults": {
-                "unit": "percent",
-                "color": {
-                  "mode": "fixed",
-                  "fixedColor": "blue"
-                },
-                "custom": {
-                  "drawStyle": "line",
-                  "lineWidth": 1,
-                  "fillOpacity": 10,
-                  "spanNulls": true,
-                  "showPoints": "never"
-                }
-              },
-              "overrides": []
-            },
-            "options": {
-              "tooltip": {
-                "mode": "multi",
-                "sort": "none"
-              },
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom"
-              }
-            }
-          },
-          {
-            "id": 6,
-            "type": "timeseries",
+            "id": 28,
+            "type": "stat",
             "title": "Pressure",
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 6,
-              "w": 6,
-              "x": 18,
+              "w": 4,
+              "x": 8,
               "y": 1
             },
             "targets": [
@@ -467,43 +375,28 @@ configs:
             "fieldConfig": {
               "defaults": {
                 "unit": "pressurehpa",
+                "decimals": 1,
                 "color": {
                   "mode": "fixed",
-                  "fixedColor": "purple"
-                },
-                "custom": {
-                  "drawStyle": "line",
-                  "lineWidth": 1,
-                  "fillOpacity": 10,
-                  "spanNulls": true,
-                  "showPoints": "never"
+                  "fixedColor": "blue"
                 }
               },
               "overrides": []
             },
             "options": {
-              "tooltip": {
-                "mode": "multi",
-                "sort": "none"
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
               },
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom"
-              }
-            }
-          },
-          {
-            "id": 7,
-            "type": "row",
-            "title": "Air Quality",
-            "collapsed": false,
-            "gridPos": {
-              "h": 1,
-              "w": 24,
-              "x": 0,
-              "y": 7
+              "graphMode": "area",
+              "colorMode": "value",
+              "textMode": "auto",
+              "orientation": "auto"
             },
-            "panels": []
+            "description": "Atmospheric pressure from BME690. Standard sea-level pressure is 1013.25 hPa. Falling pressure often indicates incoming weather fronts."
           },
           {
             "id": 8,
@@ -511,10 +404,10 @@ configs:
             "title": "IAQ",
             "datasource": "TimescaleDB",
             "gridPos": {
-              "h": 8,
+              "h": 6,
               "w": 4,
-              "x": 0,
-              "y": 8
+              "x": 12,
+              "y": 1
             },
             "targets": [
               {
@@ -571,7 +464,281 @@ configs:
               "showThresholdLabels": true,
               "showThresholdMarkers": true,
               "orientation": "auto"
-            }
+            },
+            "description": "Indoor Air Quality index (0–500) from the Bosch BSEC algorithm. 0–50 Good, 51–100 Average, 101–150 Slightly Bad, 151–200 Bad, 201–300 Worse, 301–500 Very Bad."
+          },
+          {
+            "id": 29,
+            "type": "stat",
+            "title": "CO₂",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 6,
+              "w": 4,
+              "x": 16,
+              "y": 1
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", co2\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ppm",
+                "decimals": 0,
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1000
+                    },
+                    {
+                      "color": "red",
+                      "value": 2000
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "graphMode": "area",
+              "colorMode": "value",
+              "textMode": "auto",
+              "orientation": "auto"
+            },
+            "description": "Estimated CO₂ equivalent from BME690 gas sensor via BSEC. Below 1000 ppm is good ventilation. Above 2000 ppm indicates poor ventilation."
+          },
+          {
+            "id": 23,
+            "type": "stat",
+            "title": "PM2.5",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 6,
+              "w": 4,
+              "x": 20,
+              "y": 1
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", pm2_5\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "conμgm3",
+                "decimals": 1,
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 15
+                    },
+                    {
+                      "color": "red",
+                      "value": 35
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "graphMode": "area",
+              "colorMode": "value",
+              "textMode": "auto",
+              "orientation": "auto"
+            },
+            "description": "Fine particulate matter (≤2.5 μm diameter) from the BMV080 laser sensor. WHO 24h guideline: <15 μg/m³. Above 35 μg/m³ is unhealthy."
+          },
+          {
+            "id": 7,
+            "type": "row",
+            "title": "Air Quality",
+            "collapsed": false,
+            "gridPos": {
+              "h": 1,
+              "w": 24,
+              "x": 0,
+              "y": 7
+            },
+            "panels": []
+          },
+          {
+            "id": 4,
+            "type": "timeseries",
+            "title": "Temperature",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 8,
+              "x": 0,
+              "y": 8
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", temperature AS \"Temperature\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "celsius",
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            },
+            "description": "Compensated ambient temperature over time from BME690."
+          },
+          {
+            "id": 5,
+            "type": "timeseries",
+            "title": "Humidity",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 8,
+              "x": 8,
+              "y": 8
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", humidity AS \"Humidity\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            },
+            "description": "Relative humidity over time from BME690."
+          },
+          {
+            "id": 6,
+            "type": "timeseries",
+            "title": "Pressure",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 8,
+              "x": 16,
+              "y": 8
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", pressure / 100.0 AS \"Pressure\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "pressurehpa",
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineWidth": 1,
+                  "fillOpacity": 10,
+                  "spanNulls": true,
+                  "showPoints": "never"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "tooltip": {
+                "mode": "multi",
+                "sort": "none"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            },
+            "description": "Atmospheric pressure over time from BME690."
           },
           {
             "id": 9,
@@ -580,9 +747,9 @@ configs:
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 8,
-              "w": 10,
-              "x": 4,
-              "y": 8
+              "w": 8,
+              "x": 0,
+              "y": 16
             },
             "targets": [
               {
@@ -637,7 +804,8 @@ configs:
                 "displayMode": "list",
                 "placement": "bottom"
               }
-            }
+            },
+            "description": "IAQ index over time. Orange zone (>150) indicates bad air quality, red zone (>200) is worse. Affected by both gas pollutants and humidity."
           },
           {
             "id": 10,
@@ -646,9 +814,9 @@ configs:
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 8,
-              "w": 10,
-              "x": 14,
-              "y": 8
+              "w": 8,
+              "x": 8,
+              "y": 16
             },
             "targets": [
               {
@@ -683,17 +851,18 @@ configs:
                 "displayMode": "list",
                 "placement": "bottom"
               }
-            }
+            },
+            "description": "Static IAQ — same as IAQ but calculated without humidity influence. Better for tracking gas pollutants independently of humidity changes."
           },
           {
             "id": 11,
             "type": "timeseries",
-            "title": "CO\u2082",
+            "title": "CO₂",
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 8,
-              "w": 6,
-              "x": 0,
+              "w": 8,
+              "x": 16,
               "y": 16
             },
             "targets": [
@@ -750,7 +919,8 @@ configs:
                 "displayMode": "list",
                 "placement": "bottom"
               }
-            }
+            },
+            "description": "Estimated CO₂ equivalent over time. Orange zone (>1000 ppm) suggests ventilation is needed, red zone (>2000 ppm) is poor air quality."
           },
           {
             "id": 12,
@@ -759,9 +929,9 @@ configs:
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 8,
-              "w": 6,
-              "x": 6,
-              "y": 16
+              "w": 8,
+              "x": 0,
+              "y": 24
             },
             "targets": [
               {
@@ -797,7 +967,8 @@ configs:
                 "displayMode": "list",
                 "placement": "bottom"
               }
-            }
+            },
+            "description": "Breath-level VOC concentration estimated by BSEC in parts per billion. Higher values indicate more volatile organic compounds (cleaning products, paint, cooking, etc.)."
           },
           {
             "id": 13,
@@ -806,9 +977,9 @@ configs:
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 8,
-              "w": 6,
-              "x": 12,
-              "y": 16
+              "w": 8,
+              "x": 8,
+              "y": 24
             },
             "targets": [
               {
@@ -843,7 +1014,8 @@ configs:
                 "displayMode": "list",
                 "placement": "bottom"
               }
-            }
+            },
+            "description": "Total VOC index from BSEC — a unitless relative measure of total volatile organic compound load in the air."
           },
           {
             "id": 14,
@@ -852,9 +1024,9 @@ configs:
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 8,
-              "w": 6,
-              "x": 18,
-              "y": 16
+              "w": 8,
+              "x": 16,
+              "y": 24
             },
             "targets": [
               {
@@ -890,77 +1062,8 @@ configs:
                 "displayMode": "list",
                 "placement": "bottom"
               }
-            }
-          },
-          {
-            "id": 15,
-            "type": "row",
-            "title": "Particulate Matter",
-            "collapsed": false,
-            "gridPos": {
-              "h": 1,
-              "w": 24,
-              "x": 0,
-              "y": 24
             },
-            "panels": []
-          },
-          {
-            "id": 23,
-            "type": "stat",
-            "title": "PM2.5",
-            "datasource": "TimescaleDB",
-            "gridPos": {
-              "h": 8,
-              "w": 3,
-              "x": 0,
-              "y": 25
-            },
-            "targets": [
-              {
-                "datasource": "TimescaleDB",
-                "rawSql": "SELECT time AS \"time\", pm2_5\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time",
-                "format": "time_series",
-                "refId": "A"
-              }
-            ],
-            "fieldConfig": {
-              "defaults": {
-                "unit": "con\u03bcgm3",
-                "decimals": 1,
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "yellow",
-                      "value": 15
-                    },
-                    {
-                      "color": "red",
-                      "value": 35
-                    }
-                  ]
-                }
-              },
-              "overrides": []
-            },
-            "options": {
-              "reduceOptions": {
-                "calcs": [
-                  "lastNotNull"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "graphMode": "area",
-              "colorMode": "value",
-              "textMode": "auto",
-              "orientation": "auto"
-            }
+            "description": "Proportion of gas sensor signal attributed to non-CO₂ gases. Higher percentage indicates cleaner air with less contamination."
           },
           {
             "id": 16,
@@ -969,9 +1072,9 @@ configs:
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 8,
-              "w": 10,
-              "x": 3,
-              "y": 25
+              "w": 12,
+              "x": 0,
+              "y": 32
             },
             "targets": [
               {
@@ -995,7 +1098,7 @@ configs:
             ],
             "fieldConfig": {
               "defaults": {
-                "unit": "con\u03bcgm3",
+                "unit": "conμgm3",
                 "color": {
                   "mode": "palette-classic"
                 },
@@ -1038,7 +1141,8 @@ configs:
                 "displayMode": "list",
                 "placement": "bottom"
               }
-            }
+            },
+            "description": "Particulate matter mass concentration by size: PM1 (≤1 μm), PM2.5 (≤2.5 μm), PM10 (≤10 μm). Orange line at 15, red at 35 μg/m³ (WHO PM2.5 guidelines)."
           },
           {
             "id": 17,
@@ -1047,9 +1151,9 @@ configs:
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 8,
-              "w": 11,
-              "x": 13,
-              "y": 25
+              "w": 12,
+              "x": 12,
+              "y": 32
             },
             "targets": [
               {
@@ -1073,7 +1177,7 @@ configs:
             ],
             "fieldConfig": {
               "defaults": {
-                "unit": "/cm\u00b3",
+                "unit": "/cm³",
                 "color": {
                   "mode": "palette-classic"
                 },
@@ -1096,7 +1200,8 @@ configs:
                 "displayMode": "list",
                 "placement": "bottom"
               }
-            }
+            },
+            "description": "Particle count per cm³ by size. Useful for identifying sources — combustion produces many ultrafine particles, dust produces larger ones."
           },
           {
             "id": 18,
@@ -1107,20 +1212,305 @@ configs:
               "h": 1,
               "w": 24,
               "x": 0,
-              "y": 33
+              "y": 40
             },
             "panels": []
           },
           {
+            "id": 24,
+            "type": "stat",
+            "title": "Last Seen",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 4,
+              "w": 3,
+              "x": 0,
+              "y": 41
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT EXTRACT(EPOCH FROM MAX(time)) * 1000 AS \"Last Seen\" FROM bme690",
+                "format": "table",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "dateTimeFromNow",
+                "color": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "graphMode": "none",
+              "colorMode": "value",
+              "textMode": "auto",
+              "orientation": "auto"
+            },
+            "description": "Time since the last data point was received from the sensor. If stale, the device may be offline or disconnected."
+          },
+          {
+            "id": 25,
+            "type": "stat",
+            "title": "BSEC Status",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 4,
+              "w": 3,
+              "x": 3,
+              "y": 41
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\",\n  CASE\n    WHEN stabilized = true AND run_in = true THEN 2\n    WHEN stabilized = true THEN 1\n    ELSE 0\n  END AS \"BSEC\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "mappings": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Calibrating",
+                        "color": "red"
+                      },
+                      "1": {
+                        "text": "Run-in",
+                        "color": "orange"
+                      },
+                      "2": {
+                        "text": "Ready",
+                        "color": "green"
+                      }
+                    }
+                  }
+                ],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "green",
+                      "value": 2
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "graphMode": "none",
+              "colorMode": "background",
+              "textMode": "auto",
+              "orientation": "auto"
+            },
+            "description": "Bosch BSEC algorithm status. Calibrating: initial learning phase. Run-in: building baseline (can take up to 28 days). Ready: fully calibrated."
+          },
+          {
+            "id": 22,
+            "type": "table",
+            "title": "Status",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 4,
+              "w": 18,
+              "x": 6,
+              "y": 41
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT\n  CASE WHEN stabilized = true THEN 'Yes' ELSE 'No' END AS \"Stabilized\",\n  CASE WHEN run_in = true THEN 'Yes' ELSE 'No' END AS \"Run In\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
+                "format": "table",
+                "refId": "A"
+              },
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT\n  CASE WHEN obstructed = true THEN 'Yes' ELSE 'No' END AS \"Obstructed\",\n  CASE WHEN out_of_range = true THEN 'Yes' ELSE 'No' END AS \"Out of Range\",\n  runtime AS \"Runtime (s)\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
+                "format": "table",
+                "refId": "B"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {},
+              "overrides": [
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "Stabilized"
+                  },
+                  "properties": [
+                    {
+                      "id": "custom.cellOptions",
+                      "value": {
+                        "type": "color-background",
+                        "mode": "basic"
+                      }
+                    },
+                    {
+                      "id": "mappings",
+                      "value": [
+                        {
+                          "type": "value",
+                          "options": {
+                            "Yes": {
+                              "color": "green"
+                            },
+                            "No": {
+                              "color": "red"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "Run In"
+                  },
+                  "properties": [
+                    {
+                      "id": "custom.cellOptions",
+                      "value": {
+                        "type": "color-background",
+                        "mode": "basic"
+                      }
+                    },
+                    {
+                      "id": "mappings",
+                      "value": [
+                        {
+                          "type": "value",
+                          "options": {
+                            "Yes": {
+                              "color": "green"
+                            },
+                            "No": {
+                              "color": "red"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "Obstructed"
+                  },
+                  "properties": [
+                    {
+                      "id": "custom.cellOptions",
+                      "value": {
+                        "type": "color-background",
+                        "mode": "basic"
+                      }
+                    },
+                    {
+                      "id": "mappings",
+                      "value": [
+                        {
+                          "type": "value",
+                          "options": {
+                            "Yes": {
+                              "color": "red"
+                            },
+                            "No": {
+                              "color": "green"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "Out of Range"
+                  },
+                  "properties": [
+                    {
+                      "id": "custom.cellOptions",
+                      "value": {
+                        "type": "color-background",
+                        "mode": "basic"
+                      }
+                    },
+                    {
+                      "id": "mappings",
+                      "value": [
+                        {
+                          "type": "value",
+                          "options": {
+                            "Yes": {
+                              "color": "red"
+                            },
+                            "No": {
+                              "color": "green"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "options": {
+              "showHeader": true,
+              "cellHeight": "sm"
+            },
+            "transformations": [
+              {
+                "id": "merge",
+                "options": {}
+              }
+            ],
+            "description": "Sensor status flags. Stabilized/Run In: BSEC calibration state. Obstructed/Out of Range: BMV080 PM sensor hardware warnings."
+          },
+          {
             "id": 19,
-            "type": "timeseries",
+            "type": "state-timeline",
             "title": "IAQ Accuracy",
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 8,
               "w": 6,
               "x": 0,
-              "y": 34
+              "y": 45
             },
             "targets": [
               {
@@ -1132,44 +1522,85 @@ configs:
             ],
             "fieldConfig": {
               "defaults": {
-                "min": 0,
-                "max": 3,
-                "decimals": 0,
                 "color": {
-                  "mode": "fixed",
-                  "fixedColor": "green"
+                  "mode": "thresholds"
                 },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 2
+                    },
+                    {
+                      "color": "green",
+                      "value": 3
+                    }
+                  ]
+                },
+                "mappings": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unreliable",
+                        "color": "red"
+                      },
+                      "1": {
+                        "text": "Low",
+                        "color": "orange"
+                      },
+                      "2": {
+                        "text": "Medium",
+                        "color": "yellow"
+                      },
+                      "3": {
+                        "text": "High",
+                        "color": "green"
+                      }
+                    }
+                  }
+                ],
                 "custom": {
-                  "drawStyle": "line",
-                  "lineWidth": 2,
-                  "fillOpacity": 20,
-                  "spanNulls": true,
-                  "showPoints": "never"
+                  "fillOpacity": 80,
+                  "lineWidth": 0
                 }
               },
               "overrides": []
             },
             "options": {
+              "showValue": "auto",
+              "mergeValues": true,
+              "alignValue": "center",
+              "rowHeight": 0.9,
               "tooltip": {
-                "mode": "multi",
-                "sort": "none"
+                "mode": "single"
               },
               "legend": {
                 "displayMode": "list",
                 "placement": "bottom"
               }
-            }
+            },
+            "description": "BSEC IAQ confidence level over time. 0 = Unreliable, 1 = Low (stabilising), 2 = Medium (calibrating), 3 = High (fully calibrated). Needs 3 for trustworthy IAQ readings."
           },
           {
             "id": 20,
-            "type": "timeseries",
+            "type": "state-timeline",
             "title": "tVOC Accuracy",
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 8,
               "w": 6,
               "x": 6,
-              "y": 34
+              "y": 45
             },
             "targets": [
               {
@@ -1181,17 +1612,104 @@ configs:
             ],
             "fieldConfig": {
               "defaults": {
-                "min": 0,
-                "max": 3,
-                "decimals": 0,
                 "color": {
-                  "mode": "fixed",
-                  "fixedColor": "dark-orange"
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 2
+                    },
+                    {
+                      "color": "green",
+                      "value": 3
+                    }
+                  ]
+                },
+                "mappings": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "Unreliable",
+                        "color": "red"
+                      },
+                      "1": {
+                        "text": "Low",
+                        "color": "orange"
+                      },
+                      "2": {
+                        "text": "Medium",
+                        "color": "yellow"
+                      },
+                      "3": {
+                        "text": "High",
+                        "color": "green"
+                      }
+                    }
+                  }
+                ],
+                "custom": {
+                  "fillOpacity": 80,
+                  "lineWidth": 0
+                }
+              },
+              "overrides": []
+            },
+            "options": {
+              "showValue": "auto",
+              "mergeValues": true,
+              "alignValue": "center",
+              "rowHeight": 0.9,
+              "tooltip": {
+                "mode": "single"
+              },
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom"
+              }
+            },
+            "description": "BSEC tVOC confidence level. Same 0–3 scale as IAQ accuracy. Reaches high accuracy after the sensor completes its run-in period."
+          },
+          {
+            "id": 26,
+            "type": "timeseries",
+            "title": "Raw Temperature",
+            "datasource": "TimescaleDB",
+            "gridPos": {
+              "h": 8,
+              "w": 6,
+              "x": 12,
+              "y": 45
+            },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT time AS \"time\", raw_temperature AS \"Raw Temp\", cpu_temperature AS \"CPU Temp\", temp_offset AS \"Temp Offset\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "format": "time_series",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "celsius",
+                "color": {
+                  "mode": "palette-classic"
                 },
                 "custom": {
                   "drawStyle": "line",
-                  "lineWidth": 2,
-                  "fillOpacity": 20,
+                  "lineWidth": 1,
+                  "fillOpacity": 0,
                   "spanNulls": true,
                   "showPoints": "never"
                 }
@@ -1207,37 +1725,32 @@ configs:
                 "displayMode": "list",
                 "placement": "bottom"
               }
-            }
+            },
+            "description": "Uncorrected sensor readings. Raw Temp: BME690 before compensation. CPU Temp: ESP32 die temperature used to calculate offset. Temp Offset: dynamic compensation applied."
           },
           {
-            "id": 21,
+            "id": 27,
             "type": "timeseries",
-            "title": "Raw Sensors",
+            "title": "Raw Humidity & Gas",
             "datasource": "TimescaleDB",
             "gridPos": {
               "h": 8,
               "w": 6,
-              "x": 12,
-              "y": 34
+              "x": 18,
+              "y": 45
             },
             "targets": [
               {
                 "datasource": "TimescaleDB",
-                "rawSql": "SELECT time AS \"time\", raw_temperature AS \"Raw Temp\", cpu_temperature AS \"CPU Temp\", temp_offset AS \"Temp Offset\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
+                "rawSql": "SELECT time AS \"time\", raw_humidity AS \"Raw Humidity\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
                 "format": "time_series",
                 "refId": "A"
               },
               {
                 "datasource": "TimescaleDB",
-                "rawSql": "SELECT time AS \"time\", raw_humidity AS \"Raw Humidity\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
-                "format": "time_series",
-                "refId": "B"
-              },
-              {
-                "datasource": "TimescaleDB",
                 "rawSql": "SELECT time AS \"time\", raw_gas AS \"Raw Gas\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time",
                 "format": "time_series",
-                "refId": "C"
+                "refId": "B"
               }
             ],
             "fieldConfig": {
@@ -1257,22 +1770,6 @@ configs:
                 {
                   "matcher": {
                     "id": "byName",
-                    "options": "Raw Gas"
-                  },
-                  "properties": [
-                    {
-                      "id": "custom.axisPlacement",
-                      "value": "right"
-                    },
-                    {
-                      "id": "unit",
-                      "value": "ohm"
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
                     "options": "Raw Humidity"
                   },
                   "properties": [
@@ -1284,13 +1781,17 @@ configs:
                 },
                 {
                   "matcher": {
-                    "id": "byRegexp",
-                    "options": "/(Temp|Offset)/"
+                    "id": "byName",
+                    "options": "Raw Gas"
                   },
                   "properties": [
                     {
+                      "id": "custom.axisPlacement",
+                      "value": "right"
+                    },
+                    {
                       "id": "unit",
-                      "value": "celsius"
+                      "value": "ohm"
                     }
                   ]
                 }
@@ -1305,51 +1806,11 @@ configs:
                 "displayMode": "list",
                 "placement": "bottom"
               }
-            }
-          },
-          {
-            "id": 22,
-            "type": "table",
-            "title": "Status",
-            "datasource": "TimescaleDB",
-            "gridPos": {
-              "h": 8,
-              "w": 6,
-              "x": 18,
-              "y": 34
             },
-            "targets": [
-              {
-                "datasource": "TimescaleDB",
-                "rawSql": "SELECT\n  CASE WHEN stabilized = true THEN 'Yes' ELSE 'No' END AS \"Stabilized\",\n  CASE WHEN run_in = true THEN 'Yes' ELSE 'No' END AS \"Run In\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
-                "format": "table",
-                "refId": "A"
-              },
-              {
-                "datasource": "TimescaleDB",
-                "rawSql": "SELECT\n  CASE WHEN obstructed = true THEN 'Yes' ELSE 'No' END AS \"Obstructed\",\n  CASE WHEN out_of_range = true THEN 'Yes' ELSE 'No' END AS \"Out of Range\",\n  runtime AS \"Runtime (s)\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
-                "format": "table",
-                "refId": "B"
-              }
-            ],
-            "fieldConfig": {
-              "defaults": {},
-              "overrides": []
-            },
-            "options": {
-              "showHeader": true,
-              "cellHeight": "sm"
-            },
-            "transformations": [
-              {
-                "id": "merge",
-                "options": {}
-              }
-            ]
+            "description": "Raw BME690 readings before BSEC processing. Gas resistance in ohms — higher resistance generally means cleaner air. Raw humidity before temperature compensation."
           }
         ]
       }
-
 volumes:
   mosquitto-data:
   mosquitto-log:
