@@ -7,6 +7,7 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_pm.h"
+#include "esp_timer.h"
 #include "nvs_flash.h"
 
 #include "config.h"
@@ -18,34 +19,43 @@
 
 static const char *TAG = "main";
 
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
-#define WIFI_MAX_RETRY     10
+#define WIFI_CONNECTED_BIT      BIT0
+#define WIFI_BACKOFF_INIT_MS    1000
+#define WIFI_BACKOFF_MAX_MS     30000
 
 static EventGroupHandle_t wifi_event_group;
-static int wifi_retry_count = 0;
+static int wifi_backoff_ms = WIFI_BACKOFF_INIT_MS;
+static esp_timer_handle_t wifi_retry_timer;
+
+static void wifi_retry_cb(void *arg)
+{
+    ESP_LOGI(TAG, "WiFi reconnecting...");
+    esp_wifi_connect();
+}
 
 static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
     if (base == WIFI_EVENT && id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (wifi_retry_count < WIFI_MAX_RETRY) {
-            esp_wifi_connect();
-            wifi_retry_count++;
-            ESP_LOGI(TAG, "Retrying WiFi connection (%d/%d)", wifi_retry_count, WIFI_MAX_RETRY);
-        } else {
-            xEventGroupSetBits(wifi_event_group, WIFI_FAIL_BIT);
+        led_set_blue(true);
+        ESP_LOGW(TAG, "WiFi disconnected, retrying in %dms", wifi_backoff_ms);
+        esp_timer_stop(wifi_retry_timer);   // no-op if not running
+        esp_timer_start_once(wifi_retry_timer, wifi_backoff_ms * 1000ULL);
+        wifi_backoff_ms *= 2;
+        if (wifi_backoff_ms > WIFI_BACKOFF_MAX_MS) {
+            wifi_backoff_ms = WIFI_BACKOFF_MAX_MS;
         }
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)data;
         ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
-        wifi_retry_count = 0;
+        wifi_backoff_ms = WIFI_BACKOFF_INIT_MS;
+        led_set_blue(false);
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
 
-static esp_err_t wifi_init(void)
+static void wifi_init(void)
 {
     wifi_event_group = xEventGroupCreate();
 
@@ -71,18 +81,17 @@ static esp_err_t wifi_init(void)
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+
+    const esp_timer_create_args_t timer_args = {
+        .callback = wifi_retry_cb,
+        .name = "wifi_retry",
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&timer_args, &wifi_retry_timer));
+
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    EventBits_t bits = xEventGroupWaitBits(wifi_event_group,
-        WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
-
-    if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "WiFi connected to %s", WIFI_SSID);
-        return ESP_OK;
-    }
-
-    ESP_LOGE(TAG, "WiFi connection failed");
-    return ESP_FAIL;
+    xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    ESP_LOGI(TAG, "WiFi connected to %s", WIFI_SSID);
 }
 
 static void configure_power_management(void)
@@ -118,14 +127,7 @@ void app_main(void)
 
     // Blue LED while connecting WiFi
     led_set_blue(true);
-    if (wifi_init() != ESP_OK) {
-        led_set_blue(false);
-        led_set_red(true);
-        ESP_LOGE(TAG, "WiFi failed, restarting...");
-        vTaskDelay(pdMS_TO_TICKS(3000));
-        esp_restart();
-    }
-    led_set_blue(false);
+    wifi_init();  // blocks until connected
 
     // Init CPU temperature sensor
     cpu_temp_init();
