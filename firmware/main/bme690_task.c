@@ -395,6 +395,14 @@ void bme690_task(void *param)
                         n_inputs++;
                     }
 
+                    // Enable tVOC baseline adaptation (disabled by default).
+                    // Without this, tVOC accuracy never progresses beyond 1.
+                    inputs[n_inputs].sensor_id = BSEC_INPUT_DISABLE_BASELINE_TRACKER;
+                    inputs[n_inputs].signal = 3;
+                    inputs[n_inputs].time_stamp = timestamp_ns;
+                    inputs[n_inputs].signal_dimensions = 1;
+                    n_inputs++;
+
                     bsec_output_t bsec_outputs[BSEC_NUMBER_OUTPUTS];
                     uint8_t n_bsec_outputs = BSEC_NUMBER_OUTPUTS;
 
