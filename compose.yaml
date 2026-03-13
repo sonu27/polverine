@@ -805,7 +805,7 @@ configs:
                 "placement": "bottom"
               }
             },
-            "description": "IAQ index over time. Orange zone (>150) indicates bad air quality, red zone (>200) is worse. Affected by both gas pollutants and humidity."
+            "description": "IAQ index over time. Orange zone (>150) indicates bad air quality, red zone (>200) is worse. Adaptively scaled so 50=typical good air, 200=typical polluted air for your environment."
           },
           {
             "id": 10,
@@ -852,7 +852,7 @@ configs:
                 "placement": "bottom"
               }
             },
-            "description": "Static IAQ — same as IAQ but calculated without humidity influence. Better for tracking gas pollutants independently of humidity changes."
+            "description": "Unscaled IAQ — same gas sensor input as IAQ but without adaptive background calibration. IAQ scales 50=good/200=polluted to your environment; Static IAQ gives the raw index."
           },
           {
             "id": 11,
@@ -1015,7 +1015,7 @@ configs:
                 "placement": "bottom"
               }
             },
-            "description": "Total VOC index from BSEC — a unitless relative measure of total volatile organic compound load in the air."
+            "description": "Total VOC equivalent concentration from BSEC in ppb. Only available in LP mode (3s). Higher values indicate more volatile organic compounds in the air."
           },
           {
             "id": 14,
@@ -1063,7 +1063,7 @@ configs:
                 "placement": "bottom"
               }
             },
-            "description": "Proportion of gas sensor signal attributed to non-CO₂ gases. Higher percentage indicates cleaner air with less contamination."
+            "description": "Percentage of gas sensor deviation from the clean-air baseline. Higher percentage indicates more air pollution detected."
           },
           {
             "id": 16,
