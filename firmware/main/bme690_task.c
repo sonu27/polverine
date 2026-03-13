@@ -179,7 +179,7 @@ static void publish_bsec_outputs(bsec_output_t *outputs, uint8_t n_outputs)
         "\"tvoc\":%.0f,\"tvoc_accuracy\":%u,"
         "\"raw_temperature\":%.1f,\"raw_humidity\":%.1f,\"raw_gas\":%.0f,"
         "\"cpu_temperature\":%.1f,\"temp_offset\":%.1f,"
-        "\"stabilized\":%s,\"run_in\":%s}",
+        "\"stabilized\":%d,\"run_in\":%d}",
         temperature, humidity, pressure,
         iaq, iaq_accuracy,
         static_iaq,
@@ -188,8 +188,8 @@ static void publish_bsec_outputs(bsec_output_t *outputs, uint8_t n_outputs)
         tvoc, tvoc_accuracy,
         raw_temp, raw_hum, raw_gas,
         last_cpu_temp, last_temp_offset,
-        stabilized ? "true" : "false",
-        run_in ? "true" : "false");
+        stabilized ? 1 : 0,
+        run_in ? 1 : 0);
 
     ESP_LOGI(TAG, "%s", payload);
     if (mqtt_publish(topic, payload) != ESP_OK) {

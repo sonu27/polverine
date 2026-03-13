@@ -87,8 +87,8 @@ configs:
           raw_gas BIGINT,
           cpu_temperature DOUBLE PRECISION,
           temp_offset DOUBLE PRECISION,
-          stabilized BOOLEAN,
-          run_in BOOLEAN
+          stabilized BIGINT,
+          run_in BIGINT
       );
       SELECT create_hypertable('bme690', 'time', chunk_time_interval => INTERVAL '7 days');
 
@@ -103,8 +103,8 @@ configs:
           pm1_count DOUBLE PRECISION,
           pm2_5_count DOUBLE PRECISION,
           pm10_count DOUBLE PRECISION,
-          obstructed BOOLEAN,
-          out_of_range BOOLEAN
+          obstructed BIGINT,
+          out_of_range BIGINT
       );
       SELECT create_hypertable('bmv080', 'time', chunk_time_interval => INTERVAL '7 days');
 
@@ -1274,7 +1274,7 @@ configs:
             "targets": [
               {
                 "datasource": "TimescaleDB",
-                "rawSql": "SELECT time AS \"time\",\n  CASE\n    WHEN stabilized = true AND run_in = true THEN 2\n    WHEN stabilized = true THEN 1\n    ELSE 0\n  END AS \"BSEC\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
+                "rawSql": "SELECT time AS \"time\",\n  CASE\n    WHEN stabilized = 1 AND run_in = 1 THEN 2\n    WHEN stabilized = 1 THEN 1\n    ELSE 0\n  END AS \"BSEC\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
                 "format": "time_series",
                 "refId": "A"
               }
@@ -1349,13 +1349,13 @@ configs:
             "targets": [
               {
                 "datasource": "TimescaleDB",
-                "rawSql": "SELECT\n  CASE WHEN stabilized = true THEN 'Yes' ELSE 'No' END AS \"Stabilized\",\n  CASE WHEN run_in = true THEN 'Yes' ELSE 'No' END AS \"Run In\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
+                "rawSql": "SELECT\n  CASE WHEN stabilized = 1 THEN 'Yes' ELSE 'No' END AS \"Stabilized\",\n  CASE WHEN run_in = 1 THEN 'Yes' ELSE 'No' END AS \"Run In\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
                 "format": "table",
                 "refId": "A"
               },
               {
                 "datasource": "TimescaleDB",
-                "rawSql": "SELECT\n  CASE WHEN obstructed = true THEN 'Yes' ELSE 'No' END AS \"Obstructed\",\n  CASE WHEN out_of_range = true THEN 'Yes' ELSE 'No' END AS \"Out of Range\",\n  runtime AS \"Runtime (s)\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
+                "rawSql": "SELECT\n  CASE WHEN obstructed = 1 THEN 'Yes' ELSE 'No' END AS \"Obstructed\",\n  CASE WHEN out_of_range = 1 THEN 'Yes' ELSE 'No' END AS \"Out of Range\",\n  runtime AS \"Runtime (s)\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
                 "format": "table",
                 "refId": "B"
               }

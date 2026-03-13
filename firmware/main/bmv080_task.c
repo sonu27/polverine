@@ -94,7 +94,7 @@ static void bmv080_data_ready(bmv080_output_t output, void *param)
         "{\"runtime\":%.1f,"
         "\"pm1\":%.1f,\"pm2_5\":%.1f,\"pm10\":%.1f,"
         "\"pm1_count\":%.1f,\"pm2_5_count\":%.1f,\"pm10_count\":%.1f,"
-        "\"obstructed\":%s,\"out_of_range\":%s}",
+        "\"obstructed\":%d,\"out_of_range\":%d}",
         output.runtime_in_sec,
         output.pm1_mass_concentration,
         output.pm2_5_mass_concentration,
@@ -102,8 +102,8 @@ static void bmv080_data_ready(bmv080_output_t output, void *param)
         output.pm1_number_concentration,
         output.pm2_5_number_concentration,
         output.pm10_number_concentration,
-        output.is_obstructed ? "true" : "false",
-        output.is_outside_measurement_range ? "true" : "false");
+        output.is_obstructed ? 1 : 0,
+        output.is_outside_measurement_range ? 1 : 0);
 
     ESP_LOGI(TAG, "%s", payload);
     if (mqtt_publish(topic, payload) != ESP_OK) {
