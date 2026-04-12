@@ -1337,169 +1337,156 @@ configs:
           },
           {
             "id": 22,
-            "type": "table",
-            "title": "Status",
+            "type": "stat",
+            "title": "Stabilized",
             "datasource": "TimescaleDB",
-            "gridPos": {
-              "h": 4,
-              "w": 18,
-              "x": 6,
-              "y": 41
-            },
+            "gridPos": { "h": 4, "w": 4, "x": 6, "y": 41 },
             "targets": [
               {
                 "datasource": "TimescaleDB",
-                "rawSql": "SELECT\n  CASE WHEN stabilized = 1 THEN 'Yes' ELSE 'No' END AS \"Stabilized\",\n  CASE WHEN run_in = 1 THEN 'Yes' ELSE 'No' END AS \"Run In\"\nFROM bme690\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
+                "rawSql": "SELECT stabilized FROM bme690 WHERE $$__timeFilter(time) ORDER BY time DESC LIMIT 1",
                 "format": "table",
                 "refId": "A"
-              },
-              {
-                "datasource": "TimescaleDB",
-                "rawSql": "SELECT\n  CASE WHEN obstructed = 1 THEN 'Yes' ELSE 'No' END AS \"Obstructed\",\n  CASE WHEN out_of_range = 1 THEN 'Yes' ELSE 'No' END AS \"Out of Range\",\n  runtime AS \"Runtime (s)\"\nFROM bmv080\nWHERE $$__timeFilter(time)\nORDER BY time DESC\nLIMIT 1",
-                "format": "table",
-                "refId": "B"
               }
             ],
             "fieldConfig": {
-              "defaults": {},
-              "overrides": [
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "Stabilized"
-                  },
-                  "properties": [
-                    {
-                      "id": "custom.cellOptions",
-                      "value": {
-                        "type": "color-background",
-                        "mode": "basic"
-                      }
-                    },
-                    {
-                      "id": "mappings",
-                      "value": [
-                        {
-                          "type": "value",
-                          "options": {
-                            "Yes": {
-                              "color": "green"
-                            },
-                            "No": {
-                              "color": "red"
-                            }
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "Run In"
-                  },
-                  "properties": [
-                    {
-                      "id": "custom.cellOptions",
-                      "value": {
-                        "type": "color-background",
-                        "mode": "basic"
-                      }
-                    },
-                    {
-                      "id": "mappings",
-                      "value": [
-                        {
-                          "type": "value",
-                          "options": {
-                            "Yes": {
-                              "color": "green"
-                            },
-                            "No": {
-                              "color": "red"
-                            }
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "Obstructed"
-                  },
-                  "properties": [
-                    {
-                      "id": "custom.cellOptions",
-                      "value": {
-                        "type": "color-background",
-                        "mode": "basic"
-                      }
-                    },
-                    {
-                      "id": "mappings",
-                      "value": [
-                        {
-                          "type": "value",
-                          "options": {
-                            "Yes": {
-                              "color": "red"
-                            },
-                            "No": {
-                              "color": "green"
-                            }
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "Out of Range"
-                  },
-                  "properties": [
-                    {
-                      "id": "custom.cellOptions",
-                      "value": {
-                        "type": "color-background",
-                        "mode": "basic"
-                      }
-                    },
-                    {
-                      "id": "mappings",
-                      "value": [
-                        {
-                          "type": "value",
-                          "options": {
-                            "Yes": {
-                              "color": "red"
-                            },
-                            "No": {
-                              "color": "green"
-                            }
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
+              "defaults": {
+                "mappings": [
+                  { "type": "value", "options": { "1": { "color": "green", "text": "Yes" }, "0": { "color": "red", "text": "No" } } }
+                ],
+                "color": { "mode": "fixed" }
+              }
             },
             "options": {
-              "showHeader": true,
-              "cellHeight": "sm"
+              "graphMode": "none",
+              "colorMode": "background",
+              "textMode": "value",
+              "reduceOptions": { "calcs": ["lastNotNull"] },
+              "textSize": { "titleSize": 14, "valueSize": 30 }
             },
-            "transformations": [
+            "description": "BSEC initial stabilization complete"
+          },
+          {
+            "id": 30,
+            "type": "stat",
+            "title": "Run In",
+            "datasource": "TimescaleDB",
+            "gridPos": { "h": 4, "w": 3, "x": 10, "y": 41 },
+            "targets": [
               {
-                "id": "merge",
-                "options": {}
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT run_in FROM bme690 WHERE $$__timeFilter(time) ORDER BY time DESC LIMIT 1",
+                "format": "table",
+                "refId": "A"
               }
             ],
-            "description": "Sensor status flags. Stabilized/Run In: BSEC calibration state. Obstructed/Out of Range: BMV080 PM sensor hardware warnings."
+            "fieldConfig": {
+              "defaults": {
+                "mappings": [
+                  { "type": "value", "options": { "1": { "color": "green", "text": "Yes" }, "0": { "color": "red", "text": "No" } } }
+                ],
+                "color": { "mode": "fixed" }
+              }
+            },
+            "options": {
+              "graphMode": "none",
+              "colorMode": "background",
+              "textMode": "value",
+              "reduceOptions": { "calcs": ["lastNotNull"] },
+              "textSize": { "titleSize": 14, "valueSize": 30 }
+            },
+            "description": "BSEC baseline run-in complete (up to 28 days)"
+          },
+          {
+            "id": 31,
+            "type": "stat",
+            "title": "Obstructed",
+            "datasource": "TimescaleDB",
+            "gridPos": { "h": 4, "w": 4, "x": 13, "y": 41 },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT obstructed FROM bmv080 WHERE $$__timeFilter(time) ORDER BY time DESC LIMIT 1",
+                "format": "table",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "mappings": [
+                  { "type": "value", "options": { "1": { "color": "red", "text": "Yes" }, "0": { "color": "green", "text": "No" } } }
+                ],
+                "color": { "mode": "fixed" }
+              }
+            },
+            "options": {
+              "graphMode": "none",
+              "colorMode": "background",
+              "textMode": "value",
+              "reduceOptions": { "calcs": ["lastNotNull"] },
+              "textSize": { "titleSize": 14, "valueSize": 30 }
+            },
+            "description": "BMV080 PM sensor obstruction detected"
+          },
+          {
+            "id": 32,
+            "type": "stat",
+            "title": "Out of Range",
+            "datasource": "TimescaleDB",
+            "gridPos": { "h": 4, "w": 4, "x": 17, "y": 41 },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT out_of_range FROM bmv080 WHERE $$__timeFilter(time) ORDER BY time DESC LIMIT 1",
+                "format": "table",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "mappings": [
+                  { "type": "value", "options": { "1": { "color": "red", "text": "Yes" }, "0": { "color": "green", "text": "No" } } }
+                ],
+                "color": { "mode": "fixed" }
+              }
+            },
+            "options": {
+              "graphMode": "none",
+              "colorMode": "background",
+              "textMode": "value",
+              "reduceOptions": { "calcs": ["lastNotNull"] },
+              "textSize": { "titleSize": 14, "valueSize": 30 }
+            },
+            "description": "BMV080 measurement outside valid range"
+          },
+          {
+            "id": 33,
+            "type": "stat",
+            "title": "Runtime",
+            "datasource": "TimescaleDB",
+            "gridPos": { "h": 4, "w": 3, "x": 21, "y": 41 },
+            "targets": [
+              {
+                "datasource": "TimescaleDB",
+                "rawSql": "SELECT runtime FROM bmv080 WHERE $$__timeFilter(time) ORDER BY time DESC LIMIT 1",
+                "format": "table",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s",
+                "color": { "mode": "fixed", "fixedColor": "text" }
+              }
+            },
+            "options": {
+              "graphMode": "none",
+              "colorMode": "background",
+              "textMode": "value",
+              "reduceOptions": { "calcs": ["lastNotNull"] },
+              "textSize": { "titleSize": 14, "valueSize": 30 }
+            },
+            "description": "BMV080 sensor uptime in seconds"
           },
           {
             "id": 19,
