@@ -395,13 +395,24 @@ void bme690_task(void *param)
                         n_inputs++;
                     }
 
-                    // Enable tVOC baseline adaptation (disabled by default).
-                    // Without this, tVOC accuracy never progresses beyond 1.
-                    inputs[n_inputs].sensor_id = BSEC_INPUT_DISABLE_BASELINE_TRACKER;
-                    inputs[n_inputs].signal = 3;
-                    inputs[n_inputs].time_stamp = timestamp_ns;
-                    inputs[n_inputs].signal_dimensions = 1;
-                    n_inputs++;
+                    // Baseline tracker modes are mutually exclusive:
+                    // 0 = IAQ baseline ON, tVOC OFF (default)
+                    // 3 = tVOC baseline ON, IAQ OFF
+                    // Per Bosch example: enable tVOC baseline for 30 min,
+                    // then switch to IAQ baseline. Repeat every 6 hours.
+                    {
+                        static int64_t cycle_start_us = 0;
+                        if (cycle_start_us == 0) cycle_start_us = esp_timer_get_time();
+                        int64_t elapsed_us = esp_timer_get_time() - cycle_start_us;
+                        int64_t cycle_pos_us = elapsed_us % (6LL * 60 * 60 * 1000000);
+                        bool tvoc_window = cycle_pos_us < (30LL * 60 * 1000000);
+
+                        inputs[n_inputs].sensor_id = BSEC_INPUT_DISABLE_BASELINE_TRACKER;
+                        inputs[n_inputs].signal = tvoc_window ? 3 : 0;
+                        inputs[n_inputs].time_stamp = timestamp_ns;
+                        inputs[n_inputs].signal_dimensions = 1;
+                        n_inputs++;
+                    }
 
                     bsec_output_t bsec_outputs[BSEC_NUMBER_OUTPUTS];
                     uint8_t n_bsec_outputs = BSEC_NUMBER_OUTPUTS;
