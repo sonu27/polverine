@@ -12,13 +12,13 @@ All commands are in the root `Makefile`. Override serial port with `PORT=/dev/cu
 
 | Command | Description |
 |---|---|
-| `make build` | Docker build (ESP-IDF v5.5.3) |
+| `make build` | Docker build (ESP-IDF v6.0) |
 | `make clean` | Clean rebuild (deletes sdkconfig first) |
 | `make flash` | Flash bootloader + partition table + app |
 | `make erase` | Erase entire flash including NVS |
 | `make monitor` | Serial monitor (30s) |
 
-Build runs inside Docker (`espressif/idf:v5.5.3`). Flash/erase/monitor use esptool from `.venv/` (Python venv with `esptool` + `pyserial`). Board must be in flash mode for `flash`/`erase` (hold BOOT, press RESET, release BOOT).
+Build runs inside Docker (`espressif/idf:v6.0`). Flash/erase/monitor use esptool from `.venv/` (Python venv with `esptool` + `pyserial`). Board must be in flash mode for `flash`/`erase` (hold BOOT, press RESET, release BOOT).
 
 ## Config
 
@@ -33,7 +33,7 @@ Defined in `firmware/main/pins.h`:
 
 ## Architecture
 
-ESP-IDF v5.5.3, target esp32s3, 80MHz CPU (power management locks to 80MHz).
+ESP-IDF v6.0, target esp32s3, 80MHz CPU (power management locks to 80MHz).
 
 **Startup flow** (`main.c:app_main`): NVS init → LED init → PM config → WiFi STA connect (blue LED) → CPU temp sensor init → MQTT init → spawn bmv080_task + bme690_task.
 
@@ -92,6 +92,23 @@ Two hypertables, pre-created in TimescaleDB init SQL (7-day chunks):
 2. **Air Quality** — IAQ gauge + chart, Static IAQ, CO2, bVOC, tVOC, Gas %
 3. **Particulate Matter** — PM Mass (PM1/2.5/10), PM Count
 4. **Diagnostics** — IAQ Accuracy, tVOC Accuracy, Raw Sensors, Status table
+
+### Querying Grafana / TimescaleDB
+
+Use the Grafana API with basic auth to query live sensor data:
+
+- **URL**: `http://home.lan:3000`
+- **Auth**: `admin:polverine` (basic auth)
+- **Datasource UID**: `P40AE60E18F02DE32` (TimescaleDB)
+
+Example query via API:
+```bash
+curl -s -u admin:polverine "http://home.lan:3000/api/ds/query" \
+  -H 'Content-Type: application/json' \
+  -d '{"queries":[{"refId":"A","datasource":{"uid":"P40AE60E18F02DE32","type":"grafana-postgresql-datasource"},"rawSql":"SELECT time, iaq, iaq_accuracy FROM bme690 ORDER BY time DESC LIMIT 10","format":"table"}],"from":"now-3h","to":"now"}'
+```
+
+Join with tag tables using `tag_id` (not `id`): `JOIN bme690_tag t ON b.tag_id = t.tag_id`.
 
 ### Docker Compose Notes
 

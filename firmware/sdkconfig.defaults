@@ -33,3 +33,9 @@ CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
 
 # FreeRTOS
 CONFIG_FREERTOS_HZ=1000
+
+# C library - use Newlib initially for safe migration (switch to Picolibc later)
+CONFIG_LIBC_NEWLIB=y
+
+# Compiler - suppress warnings-as-errors during migration
+CONFIG_COMPILER_DISABLE_DEFAULT_ERRORS=y

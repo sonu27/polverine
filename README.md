@@ -16,7 +16,7 @@ Sensor data is published over MQTT as JSON and can be visualized with the includ
 - [Docker](https://www.docker.com/) (for building firmware)
 - Python 3 with a venv (for flashing)
 
-No ESP-IDF installation required — builds run inside the `espressif/idf:v5.5.3` Docker image.
+No ESP-IDF installation required — builds run inside the `espressif/idf:v6.0` Docker image.
 
 ## Quick Start
 

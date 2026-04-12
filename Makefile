@@ -1,5 +1,5 @@
 PORT        ?= /dev/cu.usbmodem2101
-DOCKER_RUN  = docker run --rm -v $(CURDIR):/project -w /project/firmware espressif/idf:v5.5.3
+DOCKER_RUN  = docker run --rm -v $(CURDIR):/project -w /project/firmware espressif/idf:v6.0
 ESPTOOL     = .venv/bin/python -m esptool --chip esp32s3 -b 460800 -p $(PORT)
 
 BOOTLOADER  = firmware/build/bootloader/bootloader.bin

@@ -12,5 +12,5 @@ fi
 docker run --rm \
     -v "$PROJECT_DIR":/project \
     -w /project/firmware \
-    espressif/idf:v5.5.3 \
+    espressif/idf:v6.0 \
     idf.py build
